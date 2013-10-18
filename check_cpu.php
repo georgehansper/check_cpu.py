@@ -1,7 +1,23 @@
 <?php
-#
-# Author George Hansper george@hansper.id.au
-# Plugin: check_cpu.py
+############################################################################
+# Copyright 2013 George Hansper                                            #
+# This program has been made available to the Open Source community for    #
+# redistribution and further development under the terms of the            #
+# GNU General Public License v2: http://www.gnu.org/licenses/gpl-2.0.html  #
+############################################################################
+# This program is supplied 'as-is', in the hope that it will be useful,    #
+# but the author does not make any warranties or guarantees as             #
+# to its correct operation.                                                #
+#                                                                          #
+# Or in other words:                                                       #
+#       Test it yourself, and make sure it works for YOU.                  #
+############################################################################
+# Author: George Hansper                     e-mail:  george@hansper.id.au #
+############################################################################
+# PNP4Nagios Template: check_cpu.php   (this file)                         #
+# For Nagios Plugin:   check_cpu.py                                        #
+# Version:  $Id$
+############################################################################
 
 #   1st graph: Overall CPU usage with Overall IO Wait
 #   2nd graph: CPU usage for each core (up to 8 cores)
@@ -43,7 +59,7 @@ $def[1]=""; $opt[1]=""; $ds_name[1]="";
 $ds_name[1] = "Total CPU (all cores)";
 $opt[1] = "--vertical-label \"cpu percent\" -l0  --title \"Total CPU for $hostname / $servicedesc\" ";
 
-# Graph Total (average) CPU usage
+# Graph Total CPU usage and IO Wait (average across all cpu cores)
 $def[1]  .= rrd::def("total_cpu",           $RRDFILE[$ndx_total], $DS[$ndx_total], "MAX");
 $def[1]  .= rrd::def("total_iowait",        $RRDFILE[$ndx_iowait_total], $DS[$ndx_iowait_total], "MAX");
 $def[1]  .= rrd::area("total_cpu", "#c0c0ff");

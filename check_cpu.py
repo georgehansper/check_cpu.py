@@ -1,6 +1,25 @@
 #! /usr/bin/python
+############################################################################
+# Copyright 2013 George Hansper                                            #
+# This program has been made available to the Open Source community for    #
+# redistribution and further development under the terms of the            #
+# GNU General Public License v2: http://www.gnu.org/licenses/gpl-2.0.html  #
+############################################################################
+# This program is supplied 'as-is', in the hope that it will be useful,    #
+# but the author does not make any warranties or guarantees as             #
+# to its correct operation.                                                #
+#                                                                          #
+# Or in other words:                                                       #
+#       Test it yourself, and make sure it works for YOU.                  #
+############################################################################
+# Author: George Hansper                     e-mail:  george@hansper.id.au #
+# This plugin was originally based on check_cpu.py written by              #
+# Kirk Hammond <kirkdhammond@gmail.com>                                    #
+############################################################################
 
-#import modules
+Version = "$Id$"
+
+# import modules
 import sys, getopt, time
 
 #nagios return codes
@@ -18,6 +37,7 @@ usage = """usage: ./check_cpu.py [-w num|--warn=num] [-c|--crit=num] [-W num |--
 	-i, --io-warn  ... generate warning  if any single cpu exceeds num in io_wait (default: 90)
 	-I, --io-crit  ... generate critical if any single cpu exceeds num in io_wait (default: 98)
 	-p, --period   ... sample cpu usage over num seconds
+	-v  --version  ... print version
 
 Notes:
 	Warning/critical alerts are generated when the threshold is exceeded
@@ -144,7 +164,7 @@ def command_line_validate(argv):
   global proc_stat_file
   global per_cpu_warn,per_cpu_crit
   try:
-    opts, args = getopt.getopt(argv, 'w:c:o:W:C:i:I:p:f:', ['warn=' ,'crit=', 'warn-any=', 'crit-any=', 'io-warn=','io-crit=','period='])
+    opts, args = getopt.getopt(argv, 'w:c:o:W:C:i:I:p:f:V', ['warn=' ,'crit=', 'warn-any=', 'crit-any=', 'io-warn=','io-crit=','period=','version'])
   except getopt.GetoptError:
     print usage
   try:
@@ -191,8 +211,12 @@ def command_line_validate(argv):
       elif opt in ('-f'):
         # Just for testing
         proc_stat_file = arg
+      elif opt in ('-V','--version'):
+	print Version
+	sys.exit(WARNING)
       else:
         print usage
+	sys.exit(WARNING)
   except:
     sys.exit(CRITICAL)
   # confirm that warning level is less than critical level, alert and exit if check fails
