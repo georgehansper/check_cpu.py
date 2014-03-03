@@ -36,6 +36,8 @@ usage = """usage: ./check_cpu.py [-w num|--warn=num] [-c|--crit=num] [-W num |--
 	-C, --crit-any ... generate critical if any single cpu exceeds num (default: 100 (off))
 	-i, --io-warn  ... generate warning  if any single cpu exceeds num in io_wait (default: 90)
 	-I, --io-crit  ... generate critical if any single cpu exceeds num in io_wait (default: 98)
+	-s, --steal-warn  ... generate warning  if any single cpu exceeds num in steal (default: 30)
+	-S, --steal-crit  ... generate critical if any single cpu exceeds num in steal (default: 80)
 	-p, --period   ... sample cpu usage over num seconds
 	-v  --version  ... print version
 
@@ -49,6 +51,7 @@ Notes:
 
 cpu_percent = dict()
 io_wait_percent = dict()
+steal_percent = dict()
 cpu_id_list = []
 warn=95
 crit=98
@@ -56,6 +59,8 @@ per_cpu_warn=98
 per_cpu_crit=100  # Don't generate critical for a single CPU
 io_warn=90
 io_crit=98
+steal_warn=30
+steal_crit=80
 proc_stat_file='/proc/stat'
 sample_period = 1
 
@@ -85,12 +90,13 @@ def get_procstat_now():
     cpu_stats[cpu_id] = cpu_usage
     cpu_stats[cpu_id+'all'] = cpu_total_ticks
     cpu_stats[cpu_id+'io_wait'] = int(io_wait)
+    cpu_stats[cpu_id+'steal'] = int(io_wait)
     cpu_id_list.append(cpu_id)
   return cpu_stats
 
 # Calculate cpu use for all cpus
 def get_cpu_stats():
-  global cpu_id_list,cpu_percent,io_wait_percent,sample_period
+  global cpu_id_list,cpu_percent,io_wait_percent,sample_period,steal_percent
   cpu_stats_t0 = dict()
   cpu_stats_t1 = dict()
   cpu_stats_t0 = get_procstat_now()
@@ -98,29 +104,35 @@ def get_cpu_stats():
   cpu_stats_t1 = get_procstat_now()
   for cpu_id in cpu_id_list:
     if ( cpu_stats_t1[cpu_id+'all'] - cpu_stats_t0[cpu_id+'all'] ) > 0 :
+      # The normal case
       io_wait_percent[cpu_id] = ( cpu_stats_t1[cpu_id+'io_wait'] - cpu_stats_t0[cpu_id+'io_wait'] ) * 100 / (cpu_stats_t1[cpu_id+'all'] - cpu_stats_t0[cpu_id+'all'] )
+      steal_percent[cpu_id] = ( cpu_stats_t1[cpu_id+'steal'] - cpu_stats_t0[cpu_id+'steal'] ) * 100 / (cpu_stats_t1[cpu_id+'all'] - cpu_stats_t0[cpu_id+'all'] )
       cpu_percent[cpu_id] = ( cpu_stats_t1[cpu_id] - cpu_stats_t0[cpu_id] ) * 100 / (cpu_stats_t1[cpu_id+'all'] - cpu_stats_t0[cpu_id+'all'] )
     else:
+      # The case of a VM that has had no cpu cycles devoted to this CPU at all
       io_wait_percent[cpu_id] = 0
+      steal_percent[cpu_id] = 0
       cpu_percent[cpu_id] = 0
   return 
 
 # Build the performance data message
 def performance_data():
-  global warn,crit,io_warn,io_crit,cpu_id_list,cpu_percent,io_wait_percent
+  global warn,crit,io_warn,io_crit,cpu_id_list,cpu_percent,io_wait_percent,steal_percent
   perf_message_array = []
   for cpu_id in cpu_id_list:
     if cpu_id == 'cpu':
       perf_message_array.append(cpu_id +        '=' + str(cpu_percent[cpu_id])     + '%;' + str(warn)         + ';' + str(crit)+';0;' )
       perf_message_array.append(cpu_id + '_iowait=' + str(io_wait_percent[cpu_id]) + '%;;;0;' )
+      perf_message_array.append(cpu_id +  '_steal=' + str(steal_percent[cpu_id])   + '%;;;0;' )
     else:
       perf_message_array.append(cpu_id +        '=' + str(cpu_percent[cpu_id])     + '%;' + str(per_cpu_warn) + ';' + str(per_cpu_crit) + ';0;' )
       perf_message_array.append(cpu_id + '_iowait=' + str(io_wait_percent[cpu_id]) + '%;' + str(io_warn)      + ';' + str(io_crit) +';0;' )
+      perf_message_array.append(cpu_id +  '_steal=' + str(steal_percent[cpu_id])   + '%;' + str(steal_warn)   + ';' + str(steal_crit) +';0;' )
   return " ".join(perf_message_array)
 
 # Build the status message (service output message) and set the exit code
 def check_status():
-  global warn,crit,io_warn,io_crit,per_cpu_warn,per_cpu_crit,cpu_id_list,cpu_percent,io_wait_percent
+  global warn,crit,io_warn,io_crit,per_cpu_warn,per_cpu_crit,cpu_id_list,cpu_percent,io_wait_percent,steal_percent
   result = 0
   message = ''
   for cpu_id in cpu_id_list:
@@ -134,6 +146,7 @@ def check_status():
       else:
         message = 'Total=' + str(cpu_percent[cpu_id]) + '%'
       message += ' IOwait=' + str(io_wait_percent[cpu_id]) + '%'
+      message += ' Steal='  + str(steal_percent[cpu_id])   + '%'
     else:
       if cpu_percent[cpu_id] > per_cpu_crit:
         result |= 2
@@ -147,6 +160,12 @@ def check_status():
       elif io_wait_percent[cpu_id] > io_warn:
         result |= 1
         message += ' IO_WARN: ' + cpu_id + '=' + str(io_wait_percent[cpu_id]) +  '% > ' + str(io_warn)
+      if steal_percent[cpu_id] > steal_crit:
+        result |= 2
+        message += ' STEAL_CRIT: ' + cpu_id + '=' + str(steal_percent[cpu_id]) +  '% > ' + str(steal_crit)
+      elif steal_percent[cpu_id] > steal_warn:
+        result |= 1
+        message += ' STEAL_WARN: ' + cpu_id + '=' + str(steal_percent[cpu_id]) +  '% > ' + str(steal_warn)
 
   if result == 3 or result == 2:
     result = 2
@@ -163,8 +182,9 @@ def command_line_validate(argv):
   global warn,crit,io_warn,io_crit,sample_period
   global proc_stat_file
   global per_cpu_warn,per_cpu_crit
+  global steal_warn,steal_crit
   try:
-    opts, args = getopt.getopt(argv, 'w:c:o:W:C:i:I:p:f:V', ['warn=' ,'crit=', 'warn-any=', 'crit-any=', 'io-warn=','io-crit=','period=','version'])
+    opts, args = getopt.getopt(argv, 'w:c:o:W:C:i:I:s:S:p:f:V', ['warn=' ,'crit=', 'warn-any=', 'crit-any=', 'io-warn=','io-crit=','steal-warn=','steal-crit=','period=','version'])
   except getopt.GetoptError:
     print usage
   try:
@@ -202,7 +222,16 @@ def command_line_validate(argv):
           io_crit = int(arg)
         except:
           print '***io-crit value must be an integer***'
-          sys.exit(CRITICAL)
+      elif opt in ('-s', '--steal-warn'):
+        try:
+          steal_warn = int(arg)
+        except:
+          print '***steal-warn value must be an integer***'
+      elif opt in ('-S', '--steal-crit'):
+        try:
+          steal_crit = int(arg)
+        except:
+          print '***steal-crit value must be an integer***'
       elif opt in ('-p','--period'):
         try:
           sample_period = int(arg)
