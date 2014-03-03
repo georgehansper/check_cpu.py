@@ -90,7 +90,7 @@ def get_procstat_now():
     cpu_stats[cpu_id] = cpu_usage
     cpu_stats[cpu_id+'all'] = cpu_total_ticks
     cpu_stats[cpu_id+'io_wait'] = int(io_wait)
-    cpu_stats[cpu_id+'steal'] = int(io_wait)
+    cpu_stats[cpu_id+'steal'] = int(steal)
     cpu_id_list.append(cpu_id)
   return cpu_stats
 

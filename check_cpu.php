@@ -44,10 +44,15 @@ for ( $ndx=1; $ndx <= count($NAME); $ndx++ ) {
 		$ndx_cpus[] = $ndx;
 	} elseif ( preg_match("/[0-9]_iowait$/",$NAME[$ndx]) ) {
 		$ndx_iowait[] = $ndx;
+	} elseif ( preg_match("/[0-9]_steal$/",$NAME[$ndx]) ) {
+		$ndx_steal[] = $ndx;
 	} elseif ( $NAME[$ndx] == 'cpu_iowait' ) {
 		# This is really always 2
 		$ndx_iowait_total = $ndx;
-	} else {
+	} elseif ( $NAME[$ndx] == 'cpu_steal' ) {
+		# This is really always 2
+		$ndx_steal_total = $ndx;
+	} elseif ( $NAME[$ndx] == 'cpu' ) {
 		# This is really always 1
 		$ndx_total = $ndx;
 	}
@@ -62,11 +67,15 @@ $opt[1] = "--vertical-label \"cpu percent\" -l0  --title \"Total CPU for $hostna
 # Graph Total CPU usage and IO Wait (average across all cpu cores)
 $def[1]  .= rrd::def("total_cpu",           $RRDFILE[$ndx_total], $DS[$ndx_total], "MAX");
 $def[1]  .= rrd::def("total_iowait",        $RRDFILE[$ndx_iowait_total], $DS[$ndx_iowait_total], "MAX");
-$def[1]  .= rrd::area("total_cpu", "#c0c0ff");
+$def[1]  .= rrd::def("total_steal",         $RRDFILE[$ndx_steal_total],  $DS[$ndx_steal_total],  "MAX");
+$def[1]  .= rrd::area("total_cpu",    "#c0c0ff");
 $def[1]  .= rrd::area("total_iowait", "#ffa0a0");
-$def[1]  .= rrd::line1("total_cpu", "#0000c0",$NAME[$ndx_total]."\t\t");
+$def[1]  .= rrd::area("total_steal",  "#c0c0a0");
+$def[1]  .= rrd::line1("total_cpu",   "#0000c0",$NAME[$ndx_total]."\t\t");
 $def[1]  .= rrd::gprint("total_cpu", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
 $def[1]  .= rrd::line1("total_iowait", "#c00000",$NAME[$ndx_iowait_total]."\t");
+$def[1]  .= rrd::gprint("total_iowait", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
+$def[1]  .= rrd::line1("total_steal",  "#c0c000",$NAME[$ndx_steal_total]."\t");
 $def[1]  .= rrd::gprint("total_iowait", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
 
 if ($WARN[$ndx_total] != "") {
@@ -141,6 +150,45 @@ for( $cpu_n=0; $cpu_n<count($ndx_cpus); $cpu_n++) {
 		}
 	}
 	$ndx=$ndx_iowait[$cpu_n];
+	$name = $NAME[$ndx];
+	$color = $cpu_colors[$color_ndx];
+	$def[$def_n]  .= rrd::def("$name",           $RRDFILE[$ndx], $DS[$ndx], "MAX");
+	$def[$def_n]  .= rrd::line1("$name", "#$color",$NAME[$ndx]."\t");
+	$def[$def_n]  .= rrd::gprint("$name", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
+	if ( $color_ndx == $max_cpus_per_graph-1 ) {
+		$def_n++;
+	}
+	if ( count($ndx_cpus) <= 6 && $color_ndx<4 ) {
+		$color_ndx += 2;
+	} else {
+		$color_ndx++;
+	}
+	$color_ndx %= min($max_cpus_per_graph,count($cpu_colors));
+}
+
+# Graph Per-Core CPU steal
+$color_ndx=0;
+for( $cpu_n=0; $cpu_n<count($ndx_cpus); $cpu_n++) {
+	if ( $cpu_n % $max_cpus_per_graph == 0 ) {
+		# Start a new graph
+		$def_n++;
+		$cpu_start = $ndx_cpus[$cpu_n];
+		if ( $cpu_n + $max_cpus_per_graph >= count($ndx_cpus) ) {
+			$cpu_end=$ndx_cpus[count($ndx_cpus)-1];
+		} else {
+			$cpu_end = $ndx_cpus[$cpu_n + $max_cpus_per_graph - 1];
+		}
+		$def[$def_n]='';
+		$ds_name[$def_n] = "Steal per core";
+		$opt[$def_n] = "--vertical-label \"steal percent\" -l0  --title \"Steal per core for $hostname / $servicedesc\" ";
+		if ($WARN[$ndx_steal[0]] != "") {
+		    $def[$def_n] .= "HRULE:".$WARN[$ndx_steal[0]]."#FFFF00 ";
+		}
+		if ($CRIT[$ndx_steal[0]] != "") {
+		    $def[$def_n] .= "HRULE:".$CRIT[$ndx_steal[0]]."#FF0000 ";       
+		}
+	}
+	$ndx=$ndx_steal[$cpu_n];
 	$name = $NAME[$ndx];
 	$color = $cpu_colors[$color_ndx];
 	$def[$def_n]  .= rrd::def("$name",           $RRDFILE[$ndx], $DS[$ndx], "MAX");
