@@ -176,12 +176,12 @@ def check_status():
         message = 'Total=' + str(cpu_percent[cpu_id]) + '% > ' + str(warn)
       else:
         message = 'Total=' + str(cpu_percent[cpu_id]) + '%'
-      if io_wait_percent[cpu_id] > crit:
+      if io_wait_percent[cpu_id] > io_crit_overall:
         result |= 2
-        message += 'IOwait=' + str(io_wait_percent[cpu_id]) + '% > ' + str(io_crit_overall)
-      elif io_wait_percent[cpu_id] > warn:
+        message += ' IOwait=' + str(io_wait_percent[cpu_id]) + '% > ' + str(io_crit_overall)
+      elif io_wait_percent[cpu_id] > io_warn_overall:
         result |= 1
-        message += 'IOwait=' + str(io_wait_percent[cpu_id]) + '% > ' + str(io_warn_overall)
+        message += ' IOwait=' + str(io_wait_percent[cpu_id]) + '% > ' + str(io_warn_overall)
       else:
         message += ' IOwait=' + str(io_wait_percent[cpu_id]) + '%'
       message += ' Steal='  + str(steal_percent[cpu_id])   + '%'
@@ -218,6 +218,7 @@ def check_status():
 # define command lnie options and validate data.  Show usage or provide info on required options
 def command_line_validate(argv):
   global warn,crit,io_warn,io_crit,sample_period
+  global io_warn_overall,io_crit_overall
   global proc_stat_file
   global per_cpu_warn,per_cpu_crit
   global steal_warn,steal_crit
