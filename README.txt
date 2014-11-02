@@ -14,6 +14,7 @@ This plugin will generate an alert if
 * The overall CPU IO Wait exceeds a given threshold
 * The CPU usage of any single CPU core exceeds a threshold
 * The CPU IO Wait of any single CPU core exceeds a threshold
+* The CPU steal of any single CPU core exceeds a threshold
 
 This plugin also generates performance data suitable for PNP4Nagios, and a suitable PNP4Nagios template is supplied.
 The template provides a neater presentation than the default.
@@ -23,6 +24,11 @@ As such:
 * It is specific to Linux, and probably won't work on other systems
 * It does NOT rely on the python library psutil, and hence is backwards compatible
   with older Linux systems which do have the psutil library.
+
+New features for version 1.5
+* Can alert on overall IO Wait (missing from previous versions)
+* Can output the raw values from /proc/stat - see option '-a'
+* Also outputs ctxt and processes (context switches and new processes) as performance data (no alerting, just for graphing)
 
 This plugin is a fork of check_cpu.py by Kirk Hammond, and was written to cater for older Linux distributions which do
 not have a the library psutil available. It also adds the feature of monitoring IO Wait explicitly.
