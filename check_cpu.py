@@ -17,7 +17,7 @@
 # Kirk Hammond <kirkdhammond@gmail.com>                                    #
 ############################################################################
 
-Version = "$Id$"
+Version = "1.7 $Id$"
 
 # import modules
 import sys, getopt, time
@@ -41,8 +41,8 @@ usage = """usage: ./check_cpu.py [-w num|--warn=num] [-c|--crit=num] [-W num |--
 	-s, --steal-warn  ... generate warning  if any single cpu exceeds num in steal (default: 30)
 	-S, --steal-crit  ... generate critical if any single cpu exceeds num in steal (default: 80)
 	-p, --period   ... sample cpu usage over num seconds
-	-a, --abs      ... generate performance stats in cpu-ticks, as well as percent
-	-A, --abs-only ... generate performance stats in cpu-ticks, instead of percent
+	-a, --abs      ... generate performance stats in cpu-ticks (jiffies), as well as percent
+	-A, --abs-only ... generate performance stats in cpu-ticks (jiffies), instead of percent
 	-v  --version  ... print version
 
 Notes:
@@ -142,23 +142,21 @@ def performance_data():
   if (perfdata_abs&1) == 1:
     for cpu_id in cpu_id_list:
       if cpu_id == 'cpu':
-        perf_message_array.append(cpu_id +        '=' + str(cpu_percent[cpu_id])     + '%;' + str(warn)         + ';' + str(crit)+';0;' )
-        perf_message_array.append(cpu_id + '_iowait=' + str(io_wait_percent[cpu_id]) + '%;;;0;' )
+        perf_message_array.append(cpu_id +        '=' + str(cpu_percent[cpu_id])     + '%;' + str(warn)            + ';' + str(crit)+';0;' )
+        perf_message_array.append(cpu_id + '_iowait=' + str(io_wait_percent[cpu_id]) + '%;' + str(io_warn_overall) + ';' + str(io_crit_overall)+';0;' )
         perf_message_array.append(cpu_id +  '_steal=' + str(steal_percent[cpu_id])   + '%;;;0;' )
       else:
         perf_message_array.append(cpu_id +        '=' + str(cpu_percent[cpu_id])     + '%;' + str(per_cpu_warn) + ';' + str(per_cpu_crit) + ';0;' )
         perf_message_array.append(cpu_id + '_iowait=' + str(io_wait_percent[cpu_id]) + '%;' + str(io_warn)      + ';' + str(io_crit) +';0;' )
         perf_message_array.append(cpu_id +  '_steal=' + str(steal_percent[cpu_id])   + '%;' + str(steal_warn)   + ';' + str(steal_crit) +';0;' )
-    perf_message_array.append('ctxt_s='       + str(ctxt_per_second) + ';;;0;' )
-    perf_message_array.append('processes_s='              + str(processes_per_second) + ';;;0;' )
   if (perfdata_abs&2) == 2:
     for cpu_id in cpu_id_list:
-      perf_message_array.append(cpu_id +  '_total_ticks=' + str(cpu_stats_t1[cpu_id+'all'])     + 'c' )
-      perf_message_array.append(cpu_id +   '_busy_ticks=' + str(cpu_stats_t1[cpu_id])           + 'c' )
-      perf_message_array.append(cpu_id + '_iowait_ticks=' + str(cpu_stats_t1[cpu_id+'io_wait']) + 'c' )
-      perf_message_array.append(cpu_id +  '_steal_ticks=' + str(cpu_stats_t1[cpu_id+'steal'])   + 'c' )
+      perf_message_array.append(cpu_id +    '.all=' + str(cpu_stats_t1[cpu_id+'all'])     + 'c' )
+      perf_message_array.append(cpu_id +   '.busy=' + str(cpu_stats_t1[cpu_id])           + 'c' )
+      perf_message_array.append(cpu_id + '.iowait=' + str(cpu_stats_t1[cpu_id+'io_wait']) + 'c' )
+      perf_message_array.append(cpu_id +  '.steal=' + str(cpu_stats_t1[cpu_id+'steal'])   + 'c' )
     perf_message_array.append('ctxt='       + str(cpu_stats_t1['ctxt'])           + 'c' )
-    perf_message_array.append('processes='              + str(cpu_stats_t1['processes'])      + 'c' )
+    perf_message_array.append('procs='              + str(cpu_stats_t1['processes'])      + 'c' )
   return " ".join(perf_message_array)
 
 # Build the status message (service output message) and set the exit code

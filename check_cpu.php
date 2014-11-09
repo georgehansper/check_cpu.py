@@ -26,6 +26,9 @@
 
 # Change the value of $max_cpus_per_graph to suit your taste
 # Values higher than 16 will re-use colors from the $cpu_colors list
+
+# Version 1.7 $Id$
+
 $max_cpus_per_graph = 8;
 
 
@@ -62,27 +65,23 @@ for ( $ndx=1; $ndx <= count($NAME); $ndx++ ) {
 	} elseif ( $NAME[$ndx] == 'cpu' ) {
 		# This is really always 1
 		$ndx_total = $ndx;
-	} elseif ( $NAME[$ndx] == 'ctxt_s' ) {
-		$ndx_ctxt_s = $ndx;
-	} elseif ( $NAME[$ndx] == 'processes_s' ) {
-		$ndx_processes_s = $ndx;
-	} elseif( preg_match("/[0-9]_total_ticks$/",$NAME[$ndx]) ) {
+	} elseif( preg_match("/[0-9].all$/",$NAME[$ndx]) ) {
 		$ndx_cpu_ticks[] = $ndx;
-	} elseif( preg_match("/[0-9]_busy_ticks$/",$NAME[$ndx]) ) {
+	} elseif( preg_match("/[0-9].busy$/",$NAME[$ndx]) ) {
 		$ndx_busy_ticks[] = $ndx;
-	} elseif ( preg_match("/[0-9]_iowait_ticks$/",$NAME[$ndx]) ) {
+	} elseif ( preg_match("/[0-9].iowait$/",$NAME[$ndx]) ) {
 		$ndx_iowait_ticks[] = $ndx;
-	} elseif ( preg_match("/[0-9]_steal_ticks$/",$NAME[$ndx]) ) {
+	} elseif ( preg_match("/[0-9].steal$/",$NAME[$ndx]) ) {
 		$ndx_steal_ticks[] = $ndx;
-	} elseif ( $NAME[$ndx] == 'cpu_total_ticks' ) {
+	} elseif ( $NAME[$ndx] == 'cpu.all' ) {
 		$ndx_total_cpu_ticks = $ndx;
-	} elseif ( $NAME[$ndx] == 'cpu_busy_ticks' ) {
+	} elseif ( $NAME[$ndx] == 'cpu.busy' ) {
 		$ndx_total_busy_ticks = $ndx;
-	} elseif ( $NAME[$ndx] == 'cpu_iowait_ticks' ) {
+	} elseif ( $NAME[$ndx] == 'cpu.iowait' ) {
 		$ndx_total_iowait_ticks = $ndx;
-	} elseif ( $NAME[$ndx] == 'cpu_steal_ticks' ) {
+	} elseif ( $NAME[$ndx] == 'cpu.steal' ) {
 		$ndx_total_steal_ticks = $ndx;
-	} elseif ( $NAME[$ndx] == 'processes' ) {
+	} elseif ( $NAME[$ndx] == 'procs' ) {
 		$ndx_processes = $ndx;
 	} elseif ( $NAME[$ndx] == 'ctxt' ) {
 		$ndx_ctxt = $ndx;
@@ -110,7 +109,7 @@ if ( isset($ndx_total) ) {
 	$def[$def_n]  .= rrd::line1("total_iowait", "#c00000",$NAME[$ndx_iowait_total]."\t");
 	$def[$def_n]  .= rrd::gprint("total_iowait", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
 	$def[$def_n]  .= rrd::line1("total_steal",  "#c0c000",$NAME[$ndx_steal_total]."\t");
-	$def[$def_n]  .= rrd::gprint("total_iowait", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
+	$def[$def_n]  .= rrd::gprint("total_steal", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
 
 	if ($WARN[$ndx_total] != "") {
 	    $def[$def_n] .= "HRULE:".$WARN[$ndx_total]."#FFFF00 ";
@@ -216,35 +215,6 @@ if ( isset($ndx_steal) ) {
 		$def[$def_n]  .= rrd::gprint("$name", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
 	}
 }
-##################################################################
-# Graph ctxt (context switches/second)
-if ( isset($ndx_ctxt_s) ) {
-	$def_n++;
-	$def[$def_n]=""; $opt[$def_n]=""; $ds_name[$def_n]="";
-	$ds_name[$def_n] = "Context switches per second (all cores)";
-	$opt[$def_n] = "--vertical-label \"context switches\" -l0  --title \"Context switches per second for $hostname / $servicedesc\" ";
-
-	# Graph Context switches per second (total across all cpu cores)
-	$def[$def_n]  .= rrd::def("ctxt_s",           $RRDFILE[$ndx_ctxt_s], $DS[$ndx_ctxt_s], "MAX");
-	$def[$def_n]  .= rrd::area("ctxt_s",    "#c0c0ff");
-	$def[$def_n]  .= rrd::line1("ctxt_s",   "#0000c0",$NAME[$ndx_ctxt_s]."\t\t");
-	$def[$def_n]  .= rrd::gprint("ctxt_s", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
-}
-
-##################################################################
-# Graph processes (new processes/second)
-if ( isset($ndx_processes_s) ) {
-	$def_n++;
-	$def[$def_n]=""; $opt[$def_n]=""; $ds_name[$def_n]="";
-	$ds_name[$def_n] = "New processes per second (all cores)";
-	$opt[$def_n] = "--vertical-label \"processes/s\" -l0  --title \"New processes per second for $hostname / $servicedesc\" ";
-
-	# Graph Context switches per second (total across all cpu cores)
-	$def[$def_n]  .= rrd::def("processes_s",           $RRDFILE[$ndx_processes_s], $DS[$ndx_processes_s], "MAX");
-	$def[$def_n]  .= rrd::area("processes_s",    "#a0ffa0");
-	$def[$def_n]  .= rrd::line1("processes_s",   "#00a000",$NAME[$ndx_processes_s]."\t\t");
-	$def[$def_n]  .= rrd::gprint("processes_s", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
-}
 
 ##################################################################
 # Graph *_ticks counters
@@ -253,17 +223,19 @@ if ( isset($ndx_processes_s) ) {
 if ( isset($ndx_total_cpu_ticks) ) {
 	$def_n++;
 	$def[$def_n]=""; $opt[$def_n]=""; $ds_name[$def_n]="";
-	$ds_name[$def_n] = "CPU ticks (all cores)";
-	$opt[$def_n] = "--vertical-label \"cpu ticks\" -l0  --title \"CPU ticks for $hostname / $servicedesc\" ";
+	$ds_name[$def_n] = "CPU usage in ticks/second (all cores)";
+	$opt[$def_n] = "--vertical-label \"cpu ticks/s\" -l0  --title \"CPU usage in ticks for $hostname / $servicedesc\" ";
 
 	$def[$def_n]  .= rrd::def("total_cpu_ticks",           $RRDFILE[$ndx_total_cpu_ticks], $DS[$ndx_total_cpu_ticks], "MAX");
 	$def[$def_n]  .= rrd::def("total_busy_ticks",           $RRDFILE[$ndx_total_busy_ticks], $DS[$ndx_total_busy_ticks], "MAX");
 	$def[$def_n]  .= rrd::def("total_iowait_ticks",        $RRDFILE[$ndx_total_iowait_ticks], $DS[$ndx_total_iowait_ticks], "MAX");
 	$def[$def_n]  .= rrd::def("total_steal_ticks",         $RRDFILE[$ndx_total_steal_ticks],  $DS[$ndx_total_steal_ticks],  "MAX");
+
 	$def[$def_n]  .= rrd::area("total_cpu_ticks",    "#f0f0f0");
 	$def[$def_n]  .= rrd::area("total_busy_ticks",    "#c0c0ff");
 	$def[$def_n]  .= rrd::area("total_iowait_ticks", "#ffa0a0");
 	$def[$def_n]  .= rrd::area("total_steal_ticks",  "#c0c0a0");
+
 	$def[$def_n]  .= rrd::line1("total_cpu_ticks",   "#000000",$NAME[$ndx_total_cpu_ticks]."\t\t");
 	$def[$def_n]  .= rrd::gprint("total_cpu_ticks", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
 	$def[$def_n]  .= rrd::line1("total_busy_ticks",   "#0000c0",$NAME[$ndx_total_busy_ticks]."\t\t");
@@ -271,7 +243,7 @@ if ( isset($ndx_total_cpu_ticks) ) {
 	$def[$def_n]  .= rrd::line1("total_iowait_ticks", "#c00000",$NAME[$ndx_total_iowait_ticks]."\t");
 	$def[$def_n]  .= rrd::gprint("total_iowait_ticks", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
 	$def[$def_n]  .= rrd::line1("total_steal_ticks",  "#c0c000",$NAME[$ndx_total_steal_ticks]."\t");
-	$def[$def_n]  .= rrd::gprint("total_iowait_ticks", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
+	$def[$def_n]  .= rrd::gprint("total_steal_ticks", array("LAST", "AVERAGE", "MAX"), "%6.2lf");
 }
 
 # Graph Per-Core CPU total ticks - based on cpu ticks (aka jiffies)
@@ -298,7 +270,7 @@ if ( isset($ndx_cpu_ticks) ) {
 			}
 		}
 		$ndx=$ndx_cpu_ticks[$cpu_n];
-		$name = $NAME[$ndx];
+		$name = str_replace('.','__',$NAME[$ndx]);
 		$color = cpu_color($cpu_n,$cpus_per_graph);
 		$def[$def_n]  .= rrd::def("$name",           $RRDFILE[$ndx], $DS[$ndx], "MAX");
 		$def[$def_n]  .= rrd::line1("$name", "#$color",$NAME[$ndx]."\t");
@@ -330,7 +302,7 @@ if ( isset($ndx_busy_ticks) ) {
 			}
 		}
 		$ndx=$ndx_busy_ticks[$cpu_n];
-		$name = $NAME[$ndx];
+		$name = str_replace('.','__',$NAME[$ndx]);
 		$color = cpu_color($cpu_n,$cpus_per_graph);
 		$def[$def_n]  .= rrd::def("$name",           $RRDFILE[$ndx], $DS[$ndx], "MAX");
 		$def[$def_n]  .= rrd::line1("$name", "#$color",$NAME[$ndx]."\t");
@@ -362,7 +334,7 @@ if ( isset($ndx_iowait_ticks) ) {
 			}
 		}
 		$ndx=$ndx_iowait_ticks[$cpu_n];
-		$name = $NAME[$ndx];
+		$name = str_replace('.','__',$NAME[$ndx]);
 		$color = cpu_color($cpu_n,$cpus_per_graph);
 		$def[$def_n]  .= rrd::def("$name",           $RRDFILE[$ndx], $DS[$ndx], "MAX");
 		$def[$def_n]  .= rrd::line1("$name", "#$color",$NAME[$ndx]."\t");
@@ -394,7 +366,7 @@ if ( isset($ndx_steal_ticks) ) {
 			}
 		}
 		$ndx=$ndx_steal_ticks[$cpu_n];
-		$name = $NAME[$ndx];
+		$name = str_replace('.','__',$NAME[$ndx]);
 		$color = cpu_color($cpu_n,$cpus_per_graph);
 		$def[$def_n]  .= rrd::def("$name",           $RRDFILE[$ndx], $DS[$ndx], "MAX");
 		$def[$def_n]  .= rrd::line1("$name", "#$color",$NAME[$ndx]."\t");
