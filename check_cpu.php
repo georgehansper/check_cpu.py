@@ -32,16 +32,18 @@
 $max_cpus_per_graph = 8;
 
 
-function cpu_color($cpu_n,$cpus_per_graph) {
-	$cpu_colors  = [ 'c00000','c08000','c0c000','00a000','00a0a0','0000c0','c000c0','808080',
-			 'e06060','e0a060','e0e060','60e060','60c0c0','6060e0','e060e0','c0c0c0' ];
-	$cpu_colors6 = [ 'c00000','c0c000','00a000','0000c0','c000c0','808080' ];
-	
-	$color_ndx = $cpu_n % $cpus_per_graph;
-	if ( $cpus_per_graph <= 6 ) {
-		return($cpu_colors6[$color_ndx]);
-	} else {
-		return($cpu_colors[$color_ndx]);
+if (!function_exists('cpu_color') ) {
+	function cpu_color($cpu_n,$cpus_per_graph) {
+		$cpu_colors  = [ 'c00000','c08000','c0c000','00a000','00a0a0','0000c0','c000c0','808080',
+				 'e06060','e0a060','e0e060','60e060','60c0c0','6060e0','e060e0','c0c0c0' ];
+		$cpu_colors6 = [ 'c00000','c0c000','00a000','0000c0','c000c0','808080' ];
+		
+		$color_ndx = $cpu_n % $cpus_per_graph;
+		if ( $cpus_per_graph <= 6 ) {
+			return($cpu_colors6[$color_ndx]);
+		} else {
+			return($cpu_colors[$color_ndx]);
+		}
 	}
 }
 ##########################################################################################
